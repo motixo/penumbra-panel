@@ -2,13 +2,13 @@
 
 A softer edge for your COSMIC desktop. Penumbra replaces the panel's flat background with a gradient that fades into your wallpaper.
 
-**Light theme**
-
-![Penumbra Panel and its settings in the light theme](assets/screenshot-light.png)
-
 **Dark theme**
 
 ![Penumbra Panel and its settings in the dark theme](assets/screenshot-dark.png)
+
+**Light theme**
+
+![Penumbra Panel and its settings in the light theme](assets/screenshot-light.png)
 
 ## Features
 
