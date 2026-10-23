@@ -10,17 +10,19 @@ import tempfile
 
 import build_source
 import package_release
+import release_config
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
     parser.add_argument("--jobs", type=int, default=int(os.environ.get("CARGO_BUILD_JOBS", "2")))
+    parser.add_argument("--cosmic-version", choices=("1.10.0", "1.11.0"), default="1.10.0")
     args = parser.parse_args()
     if args.jobs < 1:
         parser.error("--jobs must be positive")
     root = Path(__file__).resolve().parents[1]
-    release = json.loads((root / "release.json").read_text())
+    release = release_config.select(json.loads((root / "release.json").read_text()), args.cosmic_version)
     # Workspaces remain available for release inspection and later rebuilds.
     cache = root / ".build"
     cache.mkdir(exist_ok=True)
@@ -35,9 +37,11 @@ def main():
         with config.open("w") as stream:
             subprocess.run(["cargo", "vendor", "--locked", "--versioned-dirs", str(vendor)],
                            cwd=source, stdout=stream, check=True)
-        config.write_text(config.read_text().replace(str(vendor), "vendor"))
+        original_config = source / ".cargo/config.toml"
+        original = original_config.read_text() + "\n" if original_config.is_file() else ""
+        config.write_text(original + config.read_text().replace(str(vendor), "vendor"))
         vendors[key], configs[key] = vendor, config
-    package_release.package(binaries, sources, vendors, configs, args.output.resolve())
+    package_release.package(binaries, sources, vendors, configs, args.output.resolve(), release)
 
 
 if __name__ == "__main__":

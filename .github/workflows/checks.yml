@@ -10,6 +10,9 @@ permissions:
 
 jobs:
   scripts-and-patches:
+    strategy:
+      matrix:
+        cosmic: ["1.10.0", "1.11.0"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -32,8 +35,10 @@ jobs:
           import json, os, sys
           sys.path.insert(0, str(Path.cwd() / 'scripts'))
           from build_source import prepare
+          import release_config
           root = Path.cwd()
           work = Path(os.environ['RUNNER_TEMP']) / 'penumbra-patch-check'
           work.mkdir()
-          prepare(root, work, json.loads((root / 'release.json').read_text()))
+          release = release_config.select(json.loads((root / 'release.json').read_text()), '${{ matrix.cosmic }}')
+          prepare(root, work, release)
           PY

@@ -12,13 +12,14 @@ import tarfile
 
 import build_source
 import install_prebuilt
+import release_config
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = ["README.md", "LICENSE", "NOTICE", "RELEASE_NOTES.md", "release.json",
          "install.sh", "uninstall.sh", "build-from-source.sh", "panel-gradient.patch",
          "settings-gradient-toggle.patch", "assets/screenshot-light.png", "assets/screenshot-dark.png",
          "scripts/panel_control.py", "scripts/install_prebuilt.py", "scripts/build_source.py",
-         "scripts/build_release.py", "scripts/package_release.py"]
+         "scripts/build_release.py", "scripts/package_release.py", "scripts/release_config.py"]
 
 
 def add_bytes(archive, name, content, mode=0o644):
@@ -48,8 +49,8 @@ def source_files(source):
             yield path, relative.as_posix()
 
 
-def package(binaries, sources, vendors, vendor_configs, output):
-    release = json.loads((ROOT / "release.json").read_text())
+def package(binaries, sources, vendors, vendor_configs, output, release=None):
+    release = release or release_config.select(json.loads((ROOT / "release.json").read_text()), "1.10.0")
     bundle = build_source.make_bundle(binaries, release)
     install_prebuilt.check_bundle(binaries, bundle, release)
     baseline = tuple(map(int, release["minimum_glibc"].split(".")))
@@ -61,14 +62,16 @@ def package(binaries, sources, vendors, vendor_configs, output):
     if any(not vendors[key].is_dir() or not vendor_configs[key].is_file() for key in sources):
         raise ValueError("Vendored dependencies and their Cargo configuration are required.")
     output.mkdir(parents=True, exist_ok=True)
-    binary_archive = output / install_prebuilt.ASSET
+    binary_archive = output / release_config.asset(release)
     with tarfile.open(binary_archive, "w:gz") as archive:
         for name in FILES:
-            add_bytes(archive, f"penumbra-panel/{name}", (ROOT / name).read_bytes(), 0o755 if name.endswith(".sh") else 0o644)
+            content = (json.dumps(release, indent=2) + "\n").encode() if name == "release.json" else (ROOT / name).read_bytes()
+            add_bytes(archive, f"penumbra-panel/{name}", content, 0o755 if name.endswith(".sh") else 0o644)
         for name, path in binaries.items():
             add_file(archive, path, f"penumbra-panel/bin/{name}")
         add_bytes(archive, "penumbra-panel/bundle.json", (json.dumps(bundle, indent=2) + "\n").encode())
-    source_archive = output / f"penumbra-panel-v{release['version']}-source.tar.gz"
+    suffix = "" if release["cosmic_version"] == "1.10.0" else "-cosmic-" + release["cosmic_version"]
+    source_archive = output / f"penumbra-panel-v{release['version']}{suffix}-source.tar.gz"
     prefix = f"penumbra-panel-v{release['version']}-source"
     with tarfile.open(source_archive, "w:gz") as archive:
         for key, source in sources.items():
@@ -80,9 +83,13 @@ def package(binaries, sources, vendors, vendor_configs, output):
                     add_file(archive, path, f"{prefix}/{key}/vendor/{path.relative_to(vendor).as_posix()}")
             add_bytes(archive, f"{prefix}/{key}/.cargo/config.toml", vendor_configs[key].read_bytes())
         for name in FILES:
-            add_bytes(archive, f"{prefix}/release-tools/{name}", (ROOT / name).read_bytes(), 0o755 if name.endswith(".sh") else 0o644)
-    checksums = "".join(f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n" for path in (binary_archive, source_archive))
-    (output / "SHA256SUMS").write_text(checksums)
+            content = (json.dumps(release, indent=2) + "\n").encode() if name == "release.json" else (ROOT / name).read_bytes()
+            add_bytes(archive, f"{prefix}/release-tools/{name}", content, 0o755 if name.endswith(".sh") else 0o644)
+    checksum_file = output / "SHA256SUMS"
+    records = {line.split()[1]: line.split()[0] for line in checksum_file.read_text().splitlines()} if checksum_file.exists() else {}
+    records.update({path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in (binary_archive, source_archive)})
+    checksums = "".join(f"{checksum}  {name}\n" for name, checksum in sorted(records.items()))
+    checksum_file.write_text(checksums)
     print(checksums, end="")
 
 
@@ -96,11 +103,13 @@ def main():
         parser.add_argument(f"--{key}-vendor", type=Path, required=True)
         parser.add_argument(f"--{key}-vendor-config", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--cosmic-version", choices=("1.10.0", "1.11.0"), default="1.10.0")
     args = parser.parse_args()
     package({"cosmic-panel": args.panel_binary, "cosmic-settings": args.settings_binary},
             {"panel": args.panel_source, "settings": args.settings_source},
             {"panel": args.panel_vendor, "settings": args.settings_vendor},
-            {"panel": args.panel_vendor_config, "settings": args.settings_vendor_config}, args.output)
+            {"panel": args.panel_vendor_config, "settings": args.settings_vendor_config}, args.output,
+            release_config.select(json.loads((ROOT / "release.json").read_text()), args.cosmic_version))
 
 
 if __name__ == "__main__":

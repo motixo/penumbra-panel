@@ -13,6 +13,7 @@ import tempfile
 
 import install_prebuilt
 import panel_control as manager
+import release_config
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -72,14 +73,15 @@ def main():
     parser.add_argument("--no-activate", action="store_true", help="Keep gradient preferences unchanged")
     parser.add_argument("--build-only", action="store_true", help="Build and test without installing")
     parser.add_argument("--jobs", type=int, default=int(os.environ.get("CARGO_BUILD_JOBS", "4")))
+    parser.add_argument("--cosmic-version", choices=("1.10.0", "1.11.0"), help="Source version; defaults to the installed COSMIC version")
     args = parser.parse_args()
     if os.geteuid() == 0:
         parser.error("Run as your normal desktop user, without sudo.")
     if args.jobs < 1:
         parser.error("--jobs must be positive")
     try:
-        release = json.loads((ROOT / "release.json").read_text())
-        install_prebuilt.check_platform(release, binary=False)
+        release = release_config.select(json.loads((ROOT / "release.json").read_text()), args.cosmic_version)
+        install_prebuilt.check_platform(release, binary=False, packages=not args.build_only)
         if not args.build_only:
             manager.require_profile(args.profile)
             for name in manager.PROGRAMS:

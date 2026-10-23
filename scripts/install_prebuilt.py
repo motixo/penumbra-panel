@@ -15,6 +15,7 @@ import tempfile
 import urllib.request
 
 import panel_control as manager
+import release_config
 
 ROOT = Path(__file__).resolve().parents[1]
 PREFIX = "penumbra-panel"
@@ -66,10 +67,11 @@ def unpack(archive_path, destination):
     return binaries, bundle
 
 
-def check_platform(release, binary=True):
+def check_platform(release, binary=True, packages=True):
     if platform.system() != "Linux":
         raise RuntimeError("Penumbra Panel requires Linux and COSMIC.")
-    manager.package_versions(release)
+    if packages:
+        manager.package_versions(release)
     if not binary:
         return
     if platform.machine().lower() not in ("x86_64", "amd64"):
@@ -98,7 +100,8 @@ def check_bundle(binaries, bundle, release, source=False):
             raise RuntimeError(f"Checksum mismatch for {name}; nothing was installed.")
         if content[:4] != b"\x7fELF":
             raise RuntimeError(f"{name} is not a Linux ELF executable.")
-        expected = f"{name} 1.9.0 + penumbra-panel {release['version']}"
+        cosmic = release["upstreams"]["panel"]["ref"].removeprefix("epoch-")
+        expected = f"{name} {cosmic} + penumbra-panel {release['version']}"
         if details["version"] != expected:
             raise RuntimeError(f"Unexpected binary version for {name}.")
         result = subprocess.run([str(binaries[name]), "--version"], capture_output=True, text=True, timeout=15)
@@ -109,17 +112,18 @@ def check_bundle(binaries, bundle, release, source=False):
 
 def fetch(release, destination):
     base = f"https://github.com/{release['repository']}/releases/download/v{release['version']}"
-    archive = destination / ASSET
+    asset = release_config.asset(release)
+    archive = destination / asset
     checksums = destination / "SHA256SUMS"
     print(f"Downloading Penumbra Panel {release['version']}…", flush=True)
     download(base + "/SHA256SUMS", checksums, 1024 * 1024)
-    download(base + "/" + ASSET, archive)
+    download(base + "/" + asset, archive)
     verify_checksum(archive, checksums.read_text())
     return unpack(archive, destination)
 
 
 def install_release(root, profile="Panel", activate=True):
-    release = json.loads((root / "release.json").read_text())
+    release = release_config.select(json.loads((root / "release.json").read_text()))
     check_platform(release)
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", release["version"]):
         raise ValueError("Invalid release version")
@@ -127,9 +131,10 @@ def install_release(root, profile="Panel", activate=True):
     for name in manager.PROGRAMS:
         manager.owned_launcher(manager.BIN / name, allow_legacy=True)
     with tempfile.TemporaryDirectory(prefix="penumbra-panel-install-") as temporary:
-        if (root / "bundle.json").is_file():
+        local_bundle = json.loads((root / "bundle.json").read_text()) if (root / "bundle.json").is_file() else None
+        if local_bundle and local_bundle.get("upstreams") == release["upstreams"]:
             binaries = {name: root / "bin" / name for name in manager.PROGRAMS}
-            bundle = json.loads((root / "bundle.json").read_text())
+            bundle = local_bundle
         else:
             binaries, bundle = fetch(release, Path(temporary))
         check_bundle(binaries, bundle, release)

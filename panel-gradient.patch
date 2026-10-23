@@ -16,7 +16,7 @@ index 8b0923d..af915d7 100644
  
  fn main() -> Result<()> {
 +    if std::env::args().nth(1).as_deref() == Some("--version") {
-+        println!("cosmic-panel {} + penumbra-panel 0.1.0", env!("CARGO_PKG_VERSION"));
++        println!("cosmic-panel {} + penumbra-panel 0.1.1", env!("CARGO_PKG_VERSION"));
 +        return Ok(());
 +    }
      // Prevents glibc from hoarding memory via memory fragmentation.

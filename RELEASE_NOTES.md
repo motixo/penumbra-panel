@@ -1,13 +1,9 @@
-Penumbra Panel's first public release, for Arch Linux with COSMIC 1.9.0.
+Penumbra Panel v0.1.1
 
-- Panel-colored gradient on all four screen edges, with automatic size scaling.
-- Light/dark theme support and opacity linked to Background opacity.
-- Matching 200 ms maximize/restore fades; 4% transparency when maximized.
-- Auto-hide support and automatic suspension when Gap is enabled.
-- A separate Panel gradient switch for the panel and dock in COSMIC Settings.
-- Per-user binary installation, source builds, and an uninstaller.
+- Matching prebuilt binaries and pinned source builds for COSMIC 1.10.0 and 1.11.0 on Arch Linux.
+- The installer selects the matching package pair and binary archive automatically.
+- Settings reports its actual upstream version.
+- Updated compatibility checks for both source versions.
+- Documented coexistence with Rasm font controls and Pulsar Clock.
 
-The binary archive contains both patched programs and requires Linux x86_64,
-glibc 2.44+, cosmic-panel 1:1.9.0-1, and cosmic-settings 1:1.9.0-1.
-The source archive includes the patched workspaces and Cargo dependencies.
-SHA256SUMS covers both archives. Log out and back in after installing.
+Linux x86_64, glibc 2.44 or newer. Install Penumbra before the matching Rasm release to keep both sets of Settings controls.

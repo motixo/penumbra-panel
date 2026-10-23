@@ -1,27 +1,14 @@
 Penumbra Panel
 
 Based on COSMIC Panel and COSMIC Settings by System76 and their contributors.
+Licensed under GPL-3.0-only; upstream license and copyright notices are retained.
 
-COSMIC Panel: https://github.com/pop-os/cosmic-panel
-Base tag: epoch-1.9.0
-Base commit: b5cc19e351b82eed999097ced1ff267d27bf8e7a
+COSMIC 1.10.0
+pop-os/cosmic-panel: epoch-1.10.0 at 3ce6ce1cec97669f91e809962d9446aaefe8a06e
+pop-os/cosmic-settings: epoch-1.10.0 at 58aeb65244b8830880e8b6ced89dcd25663f20b1
 
-COSMIC Settings: https://github.com/pop-os/cosmic-settings
-Base tag: epoch-1.9.0
-Base commit: 7421ff0ab482c942eef23fbe9280edacfbeb35cc
+COSMIC 1.11.0
+pop-os/cosmic-panel: epoch-1.11.0 at ca20ce3185b3b4404f429d59d429c40b58a2ddef
+pop-os/cosmic-settings: epoch-1.11.0 at f1d00fc06e18203e880771617657067c10c43321
 
-Modifications add a panel-colored gradient background, maximize/restore fades,
-auto-hide support, adaptive geometry, and a per-profile setting in Settings.
-The panel patch also keeps the inherited notification connection attempt alive
-across timeouts to avoid reusing a closed file descriptor.
-
-The patches and accompanying scripts are licensed under GPL-3.0-only.
-Upstream copyright and license notices are retained. See LICENSE.
-
-Release source archives include the patched upstream workspaces and vendored
-Cargo dependencies. Dependency authors retain their original copyrights and
-licenses, included with their respective sources.
-
-assets/screenshot-light.png and assets/screenshot-dark.png are usage screenshots
-supplied by the repository owner. Third-party artwork visible in the screenshots
-is not relicensed by this project.
+The screenshots were supplied by the repository owner. Third-party artwork visible in them is not relicensed by this project.

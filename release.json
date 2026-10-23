@@ -1,26 +1,69 @@
 {
-  "version": "0.1.0",
+  "version": "0.1.1",
   "repository": "motixo/penumbra-panel",
   "architecture": "x86_64",
   "minimum_glibc": "2.44",
   "upstreams": {
     "panel": {
       "repository": "pop-os/cosmic-panel",
-      "ref": "epoch-1.9.0",
-      "commit": "b5cc19e351b82eed999097ced1ff267d27bf8e7a",
-      "package": "cosmic-panel 1:1.9.0-1",
+      "ref": "epoch-1.10.0",
+      "commit": "3ce6ce1cec97669f91e809962d9446aaefe8a06e",
+      "package": "cosmic-panel 1:1.10.0-1",
       "binary": "cosmic-panel",
       "cargo_package": "cosmic-panel-bin",
       "patch": "panel-gradient.patch"
     },
     "settings": {
       "repository": "pop-os/cosmic-settings",
-      "ref": "epoch-1.9.0",
-      "commit": "7421ff0ab482c942eef23fbe9280edacfbeb35cc",
-      "package": "cosmic-settings 1:1.9.0-1",
+      "ref": "epoch-1.10.0",
+      "commit": "58aeb65244b8830880e8b6ced89dcd25663f20b1",
+      "package": "cosmic-settings 1:1.10.0-1",
       "binary": "cosmic-settings",
       "cargo_package": "cosmic-settings",
       "patch": "settings-gradient-toggle.patch"
+    }
+  },
+  "cosmic_version": "1.10.0",
+  "supported_upstreams": {
+    "1.10.0": {
+      "panel": {
+        "repository": "pop-os/cosmic-panel",
+        "ref": "epoch-1.10.0",
+        "commit": "3ce6ce1cec97669f91e809962d9446aaefe8a06e",
+        "package": "cosmic-panel 1:1.10.0-1",
+        "binary": "cosmic-panel",
+        "cargo_package": "cosmic-panel-bin",
+        "patch": "panel-gradient.patch"
+      },
+      "settings": {
+        "repository": "pop-os/cosmic-settings",
+        "ref": "epoch-1.10.0",
+        "commit": "58aeb65244b8830880e8b6ced89dcd25663f20b1",
+        "package": "cosmic-settings 1:1.10.0-1",
+        "binary": "cosmic-settings",
+        "cargo_package": "cosmic-settings",
+        "patch": "settings-gradient-toggle.patch"
+      }
+    },
+    "1.11.0": {
+      "panel": {
+        "repository": "pop-os/cosmic-panel",
+        "ref": "epoch-1.11.0",
+        "commit": "ca20ce3185b3b4404f429d59d429c40b58a2ddef",
+        "package": "cosmic-panel 1:1.11.0-1",
+        "binary": "cosmic-panel",
+        "cargo_package": "cosmic-panel-bin",
+        "patch": "panel-gradient.patch"
+      },
+      "settings": {
+        "repository": "pop-os/cosmic-settings",
+        "ref": "epoch-1.11.0",
+        "commit": "f1d00fc06e18203e880771617657067c10c43321",
+        "package": "cosmic-settings 1:1.11.0-1",
+        "binary": "cosmic-settings",
+        "cargo_package": "cosmic-settings",
+        "patch": "settings-gradient-toggle.patch"
+      }
     }
   }
 }

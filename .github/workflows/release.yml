@@ -23,7 +23,9 @@ jobs:
       - name: Build, test, and package both programs and their source
         env:
           CARGO_BUILD_JOBS: '2'
-        run: python3 scripts/build_release.py ./dist
+        run: |
+          python3 scripts/build_release.py ./dist --cosmic-version 1.10.0
+          python3 scripts/build_release.py ./dist --cosmic-version 1.11.0
       - name: Publish release assets
         env:
           GH_TOKEN: ${{ github.token }}

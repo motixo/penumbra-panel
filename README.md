@@ -21,16 +21,22 @@ A softer edge for your COSMIC desktop. Penumbra replaces the panel's flat backgr
 
 ## Compatibility
 
-The first release supports **Arch Linux**, **COSMIC 1.9.0**, and these exact packages:
+This release supports **Arch Linux** with the following matching package pairs:
 
-| Package | Version |
-| --- | --- |
-| `cosmic-panel` | `1:1.9.0-1` |
-| `cosmic-settings` | `1:1.9.0-1` |
+| COSMIC | `cosmic-panel` | `cosmic-settings` |
+| --- | --- | --- |
+| 1.10.0 | `1:1.10.0-1` | `1:1.10.0-1` |
+| 1.11.0 | `1:1.11.0-1` | `1:1.11.0-1` |
 
-The ready-made binaries require **Linux x86_64** and **glibc 2.44 or newer**. A source build uses your local toolchain and libraries. Other COSMIC versions and distributions need a port of the patches and installer.
+The installer detects the installed COSMIC version and selects its matching binaries. The ready-made binaries require **Linux x86_64** and **glibc 2.44 or newer**. Source builds use the same pinned version with your local toolchain and libraries. Both versions passed the panel and Settings regression tests; gradient controls, themes, maximize/restore, all four edges, opacity and auto-hide were also exercised in isolated desktops.
 
 Penumbra installs patched versions of both the panel and Settings for your user. The system packages stay in place. These are full programs, so another custom replacement for either program must be combined with these patches. Pulsar Clock remains a separate applet and can be used alongside Penumbra.
+
+### Using Rasm and Pulsar
+
+Pulsar Clock is a separate applet. For Rasm's font controls, install Penumbra first and then install the matching [cosmic-rasm](https://github.com/motixo/cosmic-rasm) release. Rasm selects a combined Settings binary with both the font controls and **Panel gradient**. Its updated launcher falls back to Penumbra's saved launcher after a COSMIC version change.
+
+When updating Penumbra while Rasm owns the Settings launcher, uninstall Rasm without `--purge`, update Penumbra, and reinstall Rasm. This keeps your font preferences and lets the installers preserve each other's launchers.
 
 ## Easy install: ready-made binaries
 
@@ -73,20 +79,21 @@ cd penumbra-panel
 ./install.sh --from-source
 ```
 
-This downloads both upstream workspaces at their pinned `epoch-1.9.0` commits, checks and applies the patches, runs the regression tests, and builds optimized release binaries using their original `Cargo.lock` files. Installation begins only after both builds and runtime checks succeed.
+This downloads both upstream workspaces at the pinned commits matching COSMIC 1.10.0 or 1.11.0, checks and applies the patches, runs the regression tests, and builds optimized release binaries using their original `Cargo.lock` files. Installation begins only after both builds and runtime checks succeed.
 
 To build without installing, or use fewer parallel jobs:
 
 ```sh
 ./install.sh --from-source --build-only
 ./install.sh --from-source --jobs 2
+./install.sh --from-source --cosmic-version 1.11.0 --build-only
 ```
 
 `--profile NAME` and `--no-activate` also work with source builds. Source and build files are kept under `~/.cache/penumbra-panel/`. Set an absolute `CARGO_TARGET_DIR` to reuse compiled dependencies across builds. Internet access is needed to fetch upstream sources and dependencies.
 
 ### Corresponding release source
 
-Each release also includes `penumbra-panel-vVERSION-source.tar.gz`. It contains the exact patched Panel and Settings workspaces, their original license notices, vendored Cargo dependencies, and the release tools. To build from that archive, enter each workspace and run:
+Each release includes corresponding binary and source archives for both supported COSMIC versions. The default filenames target 1.10.0; the 1.11.0 filenames include `-cosmic-1.11.0`. The default binary installer can download the matching 1.11.0 archive automatically. Each source archive contains the exact patched Panel and Settings workspaces, their original license notices, vendored Cargo dependencies, and the release tools. To build from that archive, enter each workspace and run:
 
 ```sh
 cd panel

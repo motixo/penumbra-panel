@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import install_prebuilt as installer
 import panel_control as manager
+import release_config
 
 
 class InstallerTests(unittest.TestCase):
@@ -40,7 +41,7 @@ class InstallerTests(unittest.TestCase):
             self.binaries[name] = path
         self.bundle = {**self.release, "binaries": {
             name: {"sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-                   "version": f"{name} 1.9.0 + penumbra-panel {self.release['version']}"}
+                   "version": f"{name} {self.release['cosmic_version']} + penumbra-panel {self.release['version']}"}
             for name, path in self.binaries.items()}}
 
     def install(self, **kwargs):
@@ -180,7 +181,7 @@ class InstallerTests(unittest.TestCase):
         fake = self.root / "fakebin"
         fake.mkdir()
         pacman = fake / "pacman"
-        pacman.write_text('#!/bin/sh\nprintf "%s %s\\n" "$2" "${PENUMBRA_TEST_VERSION:-1:1.9.0-1}"\n')
+        pacman.write_text('#!/bin/sh\nprintf "%s %s\\n" "$2" "${PENUMBRA_TEST_VERSION:-1:1.10.0-1}"\n')
         pacman.chmod(0o755)
         stock = self.root / "stock-settings"
         stock.write_text("#!/bin/sh\nprintf 'stock\\n'\n")
@@ -235,7 +236,7 @@ class InstallerTests(unittest.TestCase):
     def test_download_failure_keeps_existing_installation(self):
         self.install()
         before = {name: (manager.BIN / name).read_bytes() for name in manager.PROGRAMS}
-        with patch.object(installer, "check_platform"), patch.object(installer, "fetch", side_effect=OSError("network unavailable")):
+        with patch.object(release_config, "select", return_value=self.release), patch.object(installer, "check_platform"), patch.object(installer, "fetch", side_effect=OSError("network unavailable")):
             with self.assertRaisesRegex(OSError, "network unavailable"):
                 installer.install_release(ROOT)
         for name in manager.PROGRAMS:
@@ -247,6 +248,35 @@ class InstallerTests(unittest.TestCase):
                 self.install(profile=name)
         self.assertFalse(manager.DATA.exists())
         self.assertFalse(manager.STATE.exists())
+
+    def test_supported_version_selects_matching_source_and_archive(self):
+        for version in ("1.10.0", "1.11.0"):
+            with patch.object(release_config.subprocess, "check_output", side_effect=lambda args, **kwargs: args[-1] + " 1:" + version + "-1\n"):
+                release = release_config.select(self.release)
+            self.assertEqual(release["cosmic_version"], version)
+            self.assertEqual(release["upstreams"]["panel"]["ref"], "epoch-" + version)
+            if version == "1.11.0":
+                self.assertIn("1.11.0", release_config.asset(release))
+        self.assertEqual(self.release["cosmic_version"], "1.10.0")
+
+    def test_different_panel_and_settings_versions_are_rejected(self):
+        with patch.object(release_config.subprocess, "check_output", side_effect=["cosmic-panel 1:1.11.0-1\n", "cosmic-settings 1:1.10.0-1\n"]):
+            with self.assertRaisesRegex(RuntimeError, "must match"):
+                release_config.select(self.release)
+        with self.assertRaisesRegex(RuntimeError, "Unsupported COSMIC"):
+            release_config.select(self.release, "1.12.0")
+
+    def test_other_version_archive_downloads_matching_binaries(self):
+        package = self.root / "extracted"
+        package.mkdir()
+        (package / "release.json").write_text(json.dumps(self.release))
+        (package / "bundle.json").write_text(json.dumps(self.bundle))
+        selected = release_config.select(self.release, "1.11.0")
+        matching = {**self.bundle, **selected}
+        with patch.object(release_config, "select", return_value=selected), patch.object(installer, "check_platform"), patch.object(installer, "fetch", return_value=(self.binaries, matching)) as fetch, patch.object(installer, "check_bundle"), patch.object(manager, "install") as install:
+            installer.install_release(package)
+        self.assertEqual(fetch.call_args.args[0]["cosmic_version"], "1.11.0")
+        self.assertEqual(install.call_args.args[2]["cosmic_version"], "1.11.0")
 
 
 if __name__ == "__main__":
