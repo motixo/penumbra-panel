@@ -22,4 +22,6 @@ Release source archives include the patched upstream workspaces and vendored
 Cargo dependencies. Dependency authors retain their original copyrights and
 licenses, included with their respective sources.
 
-assets/preview.svg is an illustration of the effect, not a desktop screenshot.
+assets/screenshot-light.png and assets/screenshot-dark.png are usage screenshots
+supplied by the repository owner. Third-party artwork visible in the screenshots
+is not relicensed by this project.

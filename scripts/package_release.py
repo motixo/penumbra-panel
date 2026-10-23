@@ -16,7 +16,7 @@ import install_prebuilt
 ROOT = Path(__file__).resolve().parents[1]
 FILES = ["README.md", "LICENSE", "NOTICE", "RELEASE_NOTES.md", "release.json",
          "install.sh", "uninstall.sh", "build-from-source.sh", "panel-gradient.patch",
-         "settings-gradient-toggle.patch", "assets/preview.svg",
+         "settings-gradient-toggle.patch", "assets/screenshot-light.png", "assets/screenshot-dark.png",
          "scripts/panel_control.py", "scripts/install_prebuilt.py", "scripts/build_source.py",
          "scripts/build_release.py", "scripts/package_release.py"]
 
