@@ -17,10 +17,7 @@ A softer edge for your COSMIC desktop. Penumbra replaces the panel's flat backgr
 - Gradient strength follows **Background opacity** in COSMIC Settings.
 - Adaptive fade size: 32 px panel → 96 px gradient, 48 → 144, 64 → 192.
 - Auto-hide moves and fades the background with the panel.
-- Matching 200 ms fades between the gradient and the maximized background.
 - A **Panel gradient** switch in Settings, independently for the panel and dock.
-
-When a window is maximized, the background becomes uniform at 96% opacity (4% transparency). Restoring the window brings the gradient back. With **Gap** enabled, the effect and its switch are disabled; turning Gap off restores your saved setting.
 
 ## Compatibility
 
