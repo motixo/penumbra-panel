@@ -38,8 +38,6 @@ Download the binary archive from [Releases](https://github.com/motixo/penumbra-p
 
 ```sh
 curl -fLO https://github.com/motixo/penumbra-panel/releases/latest/download/penumbra-panel-linux-x86_64.tar.gz
-curl -fLO https://github.com/motixo/penumbra-panel/releases/latest/download/SHA256SUMS
-sha256sum --check --ignore-missing SHA256SUMS
 tar -xzf penumbra-panel-linux-x86_64.tar.gz
 cd penumbra-panel
 ./install.sh
