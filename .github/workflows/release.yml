@@ -1,0 +1,33 @@
+name: Build binary release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - name: Install build dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm --needed git rust python clang cmake pkgconf \
+            fontconfig freetype2 wayland libxkbcommon libinput libpulse \
+            libpipewire libglvnd dbus systemd-libs dav1d github-cli
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build, test, and package both programs and their source
+        env:
+          CARGO_BUILD_JOBS: '2'
+        run: python3 scripts/build_release.py ./dist
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(python3 -c 'import json; print(json.load(open("release.json"))["version"])')
+          gh release create "v$version" dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Penumbra Panel v$version" --notes-file RELEASE_NOTES.md

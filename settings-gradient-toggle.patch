@@ -1,0 +1,278 @@
+diff --git a/cosmic-settings/src/main.rs b/cosmic-settings/src/main.rs
+index faf1a8f..584ced0 100644
+--- a/cosmic-settings/src/main.rs
++++ b/cosmic-settings/src/main.rs
+@@ -39,7 +39,7 @@ use serde::{Deserialize, Serialize};
+ use tracing_subscriber::prelude::*;
+ 
+ #[derive(Parser, Debug, Serialize, Deserialize, Clone)]
+-#[command(author, version, about, long_about = None)]
++#[command(author, version = "1.9.0 + penumbra-panel 0.1.0", about, long_about = None)]
+ #[command(propagate_version = true)]
+ pub struct Args {
+     #[command(subcommand)]
+diff --git a/cosmic-settings/src/pages/desktop/dock/mod.rs b/cosmic-settings/src/pages/desktop/dock/mod.rs
+index a118e91..66d17c6 100644
+--- a/cosmic-settings/src/pages/desktop/dock/mod.rs
++++ b/cosmic-settings/src/pages/desktop/dock/mod.rs
+@@ -140,8 +140,12 @@ impl Default for Page {
+         .ok();
+ 
+         let container_config = CosmicPanelContainerConfig::load().ok();
++        let top_edge_gradient = config_helper
++            .as_ref()
++            .and_then(super::panel::gradient::Preferences::read);
+         Self {
+             inner: PageInner {
++                top_edge_gradient,
+                 config_helper,
+                 panel_config,
+                 container_config,
+@@ -215,6 +219,11 @@ impl page::Page<crate::pages::Message> for Page {
+     }
+ 
+     fn on_enter(&mut self) -> Task<crate::pages::Message> {
++        self.inner.top_edge_gradient = self
++            .inner
++            .config_helper
++            .as_ref()
++            .and_then(super::panel::gradient::Preferences::read);
+         self.inner.update_defaults();
+ 
+         Task::none()
+diff --git a/cosmic-settings/src/pages/desktop/panel/inner.rs b/cosmic-settings/src/pages/desktop/panel/inner.rs
+index 36ccf42..76ff1e0 100644
+--- a/cosmic-settings/src/pages/desktop/panel/inner.rs
++++ b/cosmic-settings/src/pages/desktop/panel/inner.rs
+@@ -7,6 +7,7 @@ use cosmic::iced::{Alignment, Length};
+ use cosmic::widget::{button, container, dropdown, row, settings, slider, space, text};
+ use cosmic::{Element, Task, surface};
+ 
++use super::gradient;
+ use cosmic::Apply;
+ use cosmic_config::ConfigSet;
+ use cosmic_panel_config::{
+@@ -20,6 +21,7 @@ use std::time::Duration;
+ pub struct PageInner {
+     pub(crate) config_helper: Option<cosmic_config::Config>,
+     pub(crate) panel_config: Option<CosmicPanelConfig>,
++    pub(crate) top_edge_gradient: Option<gradient::Preferences>,
+     pub opacity: f32,
+     pub opacity_changing: bool,
+     pub size: PanelSize,
+@@ -38,6 +40,7 @@ impl Default for PageInner {
+         Self {
+             config_helper: Option::default(),
+             panel_config: Option::default(),
++            top_edge_gradient: None,
+             opacity: 0.0,
+             opacity_changing: false,
+             size: PanelSize::M,
+@@ -163,6 +166,7 @@ pub(crate) fn style<
+         extend_label = p.extend_label();
+         appearance = fl!("panel-style", "appearance");
+         background_opacity = fl!("panel-style", "background-opacity");
++        panel_gradient = fl!("panel-style", "panel-gradient");
+         size = fl!("panel-style", "size");
+     });
+ 
+@@ -201,6 +205,15 @@ pub(crate) fn style<
+                         move |a| crate::app::Message::PageMessage(msg_map(a)),
+                     ),
+                 ))
++                .apply(|section| {
++                    section.add(
++                        settings::item::builder(&descriptions[panel_gradient]).toggler_maybe(
++                            !panel_config.anchor_gap
++                                && inner.top_edge_gradient.as_ref().is_some_and(|p| p.enabled),
++                            (!panel_config.anchor_gap).then_some(Message::TopEdgeGradient),
++                        ),
++                    )
++                })
+                 .add(settings::item::builder(&descriptions[size]).flex_control({
+                     // TODO custom discrete slider variant
+                     row::with_children(vec![
+@@ -417,6 +430,7 @@ impl From<Appearance> for CosmicPanelBackground {
+ pub enum Message {
+     // panel messages
+     AutoHidePanel(bool),
++    TopEdgeGradient(bool),
+     PanelAnchor(usize),
+     Output(usize),
+     AnchorGap(bool),
+@@ -539,6 +553,25 @@ impl PageInner {
+         };
+ 
+         match message {
++            Message::TopEdgeGradient(enabled) => {
++                if panel_config.anchor_gap {
++                    return Task::none();
++                }
++                let mut preferences = match gradient::Preferences::load(helper) {
++                    Ok(value) => value.unwrap_or_else(gradient::Preferences::preset),
++                    Err(error) => {
++                        tracing::error!(?error, "Could not update panel gradient preferences");
++                        return Task::none();
++                    }
++                };
++                preferences.enabled = enabled;
++                match helper.set("top_edge_gradient", Some(&preferences)) {
++                    Ok(()) => self.top_edge_gradient = Some(preferences),
++                    Err(error) => {
++                        tracing::error!(?error, "Could not save panel gradient preferences")
++                    }
++                }
++            }
+             Message::AutoHidePanel(enabled) => {
+                 if enabled {
+                     _ = panel_config.set_exclusive_zone(helper, false);
+@@ -653,6 +686,7 @@ impl PageInner {
+                 }
+             }
+             Message::PanelConfig(c) => {
++                self.top_edge_gradient = gradient::Preferences::read(helper);
+                 self.size = c.size.clone();
+                 self.panel_config = Some(*c);
+                 return Task::none();
+diff --git a/cosmic-settings/src/pages/desktop/panel/mod.rs b/cosmic-settings/src/pages/desktop/panel/mod.rs
+index 72aa66b..86c61e8 100644
+--- a/cosmic-settings/src/pages/desktop/panel/mod.rs
++++ b/cosmic-settings/src/pages/desktop/panel/mod.rs
+@@ -13,6 +13,7 @@ use crate::pages::desktop::panel::inner::{
+ use self::inner::{PageInner, PanelPage};
+ 
+ pub mod applets_inner;
++pub(crate) mod gradient;
+ pub mod inner;
+ 
+ pub struct Page {
+@@ -95,8 +96,10 @@ impl Default for Page {
+         })
+         .ok();
+         let container_config = CosmicPanelContainerConfig::load().ok();
++        let top_edge_gradient = config_helper.as_ref().and_then(gradient::Preferences::read);
+         Self {
+             inner: PageInner {
++                top_edge_gradient,
+                 config_helper,
+                 panel_config,
+                 container_config,
+@@ -143,6 +146,11 @@ impl page::Page<crate::pages::Message> for Page {
+ 
+     fn on_enter(&mut self) -> Task<crate::pages::Message> {
+         self.inner.update_defaults();
++        self.inner.top_edge_gradient = self
++            .inner
++            .config_helper
++            .as_ref()
++            .and_then(gradient::Preferences::read);
+ 
+         Task::none()
+     }
+diff --git a/i18n/en/cosmic_settings.ftl b/i18n/en/cosmic_settings.ftl
+index 7318d9a..45a642f 100644
+--- a/i18n/en/cosmic_settings.ftl
++++ b/i18n/en/cosmic_settings.ftl
+@@ -482,6 +482,7 @@ panel-behavior-and-position = Behavior and positions
+     .display = Show on display
+ 
+ panel-style = Style
++    .panel-gradient = Panel gradient
+     .anchor-gap = Gap between panel and screen edges
+     .dock-anchor-gap = Gap between dock and screen edges
+     .extend = Extend panel to screen edges
+diff --git a/cosmic-settings/src/pages/desktop/panel/gradient.rs b/cosmic-settings/src/pages/desktop/panel/gradient.rs
+new file mode 100644
+index 0000000..bfa066f
+--- /dev/null
++++ b/cosmic-settings/src/pages/desktop/panel/gradient.rs
+@@ -0,0 +1,89 @@
++use cosmic::cosmic_config::{Config, ConfigGet, Error};
++use serde::{Deserialize, Serialize};
++
++/// The optional background effect understood by the patched panel. Keeping this
++/// preference separate avoids changing the stock panel configuration schema.
++#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
++#[serde(default, deny_unknown_fields)]
++pub(crate) struct Preferences {
++    pub enabled: bool,
++    height: u32,
++    opacity: f32,
++    // Read older preferences without discarding their saved fields.
++    maximized_color: [u8; 3],
++    maximized_opacity: f32,
++}
++
++impl Default for Preferences {
++    fn default() -> Self {
++        Self {
++            enabled: true,
++            height: 96,
++            opacity: 0.4,
++            maximized_color: [36, 38, 42],
++            maximized_opacity: 1.0,
++        }
++    }
++}
++
++impl Preferences {
++    pub fn preset() -> Self {
++        Self {
++            height: 96,
++            opacity: 0.72,
++            maximized_opacity: 0.96,
++            ..Self::default()
++        }
++    }
++
++    pub fn load(config: &Config) -> Result<Option<Self>, Error> {
++        match config.get("top_edge_gradient") {
++            Err(error) if !error.is_err() => Ok(None),
++            value => value,
++        }
++    }
++
++    pub fn read(config: &Config) -> Option<Self> {
++        match Self::load(config) {
++            Ok(value) => value,
++            Err(error) => {
++                tracing::error!(?error, "Could not read panel gradient preferences");
++                None
++            }
++        }
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn toggling_preserves_legacy_appearance_preferences() {
++        let saved: Option<Preferences> = ron::from_str(
++            "Some((height: 187, opacity: 0.61, maximized_color: (10, 20, 30), maximized_opacity: 0.96))"
++        ).unwrap();
++        let mut value = saved.unwrap();
++        assert!(value.enabled);
++        let original = value.clone();
++        value.enabled = false;
++        let encoded = ron::to_string(&Some(value)).unwrap();
++        let mut decoded: Preferences = ron::from_str::<Option<Preferences>>(&encoded)
++            .unwrap()
++            .unwrap();
++        assert!(!decoded.enabled);
++        decoded.enabled = true;
++        assert_eq!(decoded, original);
++    }
++
++    #[test]
++    fn disabled_state_survives_reopening_and_new_presets_keep_four_percent_transparency() {
++        let disabled: Option<Preferences> = ron::from_str(
++            "Some((enabled: false, height: 128, opacity: 0.72, maximized_opacity: 0.96))",
++        )
++        .unwrap();
++        assert!(!disabled.unwrap().enabled);
++        assert_eq!(ron::from_str::<Option<Preferences>>("None").unwrap(), None);
++        assert_eq!(Preferences::preset().maximized_opacity, 0.96);
++    }
++}

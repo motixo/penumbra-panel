@@ -1,0 +1,26 @@
+{
+  "version": "0.1.0",
+  "repository": "motixo/penumbra-panel",
+  "architecture": "x86_64",
+  "minimum_glibc": "2.44",
+  "upstreams": {
+    "panel": {
+      "repository": "pop-os/cosmic-panel",
+      "ref": "epoch-1.9.0",
+      "commit": "b5cc19e351b82eed999097ced1ff267d27bf8e7a",
+      "package": "cosmic-panel 1:1.9.0-1",
+      "binary": "cosmic-panel",
+      "cargo_package": "cosmic-panel-bin",
+      "patch": "panel-gradient.patch"
+    },
+    "settings": {
+      "repository": "pop-os/cosmic-settings",
+      "ref": "epoch-1.9.0",
+      "commit": "7421ff0ab482c942eef23fbe9280edacfbeb35cc",
+      "package": "cosmic-settings 1:1.9.0-1",
+      "binary": "cosmic-settings",
+      "cargo_package": "cosmic-settings",
+      "patch": "settings-gradient-toggle.patch"
+    }
+  }
+}

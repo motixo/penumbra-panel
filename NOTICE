@@ -1,0 +1,25 @@
+Penumbra Panel
+
+Based on COSMIC Panel and COSMIC Settings by System76 and their contributors.
+
+COSMIC Panel: https://github.com/pop-os/cosmic-panel
+Base tag: epoch-1.9.0
+Base commit: b5cc19e351b82eed999097ced1ff267d27bf8e7a
+
+COSMIC Settings: https://github.com/pop-os/cosmic-settings
+Base tag: epoch-1.9.0
+Base commit: 7421ff0ab482c942eef23fbe9280edacfbeb35cc
+
+Modifications add a panel-colored gradient background, maximize/restore fades,
+auto-hide support, adaptive geometry, and a per-profile setting in Settings.
+The panel patch also keeps the inherited notification connection attempt alive
+across timeouts to avoid reusing a closed file descriptor.
+
+The patches and accompanying scripts are licensed under GPL-3.0-only.
+Upstream copyright and license notices are retained. See LICENSE.
+
+Release source archives include the patched upstream workspaces and vendored
+Cargo dependencies. Dependency authors retain their original copyrights and
+licenses, included with their respective sources.
+
+assets/preview.svg is an illustration of the effect, not a desktop screenshot.

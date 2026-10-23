@@ -1,0 +1,6 @@
+/bin/
+/bundle.json
+/dist/
+/.build/
+__pycache__/
+*.pyc
