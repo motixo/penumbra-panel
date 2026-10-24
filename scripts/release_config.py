@@ -1,22 +1,17 @@
 """Select the pinned source and binaries for an explicitly supported COSMIC release."""
 import copy
-import re
-import subprocess
+
+import system_packages
 
 
 def select(release, version=None):
     variants = release.get("supported_upstreams", {})
     if version is None:
+        manager = system_packages.backend()
         versions = []
         for name in ("cosmic-panel", "cosmic-settings"):
-            try:
-                package = subprocess.check_output(["pacman", "-Q", name], text=True, stderr=subprocess.PIPE).strip()
-            except (OSError, subprocess.CalledProcessError) as error:
-                raise RuntimeError("Cannot detect COSMIC. Use --cosmic-version for a build-only source build.") from error
-            match = re.fullmatch(re.escape(name) + r" (?:[0-9]+:)?([0-9]+\.[0-9]+\.[0-9]+)-[^ ]+", package)
-            if not match:
-                raise RuntimeError("Unsupported package: " + package)
-            versions.append(match[1])
+            package = system_packages.query(name, manager)
+            versions.append(system_packages.upstream_version(name, package))
         if len(set(versions)) != 1:
             raise RuntimeError("The installed Panel and Settings versions must match.")
         version = versions[0]

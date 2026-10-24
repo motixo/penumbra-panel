@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import install_prebuilt as installer
 import panel_control as manager
 import release_config
+import system_packages
 
 
 class InstallerTests(unittest.TestCase):
@@ -22,6 +23,9 @@ class InstallerTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory(prefix="penumbra test ")
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
+        self.backend = patch.object(system_packages, "backend", return_value="pacman")
+        self.backend_mock = self.backend.start()
+        self.addCleanup(self.backend.stop)
         self.release = json.loads((ROOT / "release.json").read_text())
         self.locations = dict(DATA=self.root / "data", STATE=self.root / "state",
                               CONFIG=self.root / "config", BIN=self.root / "bin")
@@ -251,7 +255,7 @@ class InstallerTests(unittest.TestCase):
 
     def test_supported_version_selects_matching_source_and_archive(self):
         for version in ("1.10.0", "1.11.0"):
-            with patch.object(release_config.subprocess, "check_output", side_effect=lambda args, **kwargs: args[-1] + " 1:" + version + "-1\n"):
+            with patch.object(system_packages.subprocess, "check_output", side_effect=lambda args, **kwargs: args[-1] + " 1:" + version + "-1\n"):
                 release = release_config.select(self.release)
             self.assertEqual(release["cosmic_version"], version)
             self.assertEqual(release["upstreams"]["panel"]["ref"], "epoch-" + version)
@@ -260,7 +264,7 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(self.release["cosmic_version"], "1.10.0")
 
     def test_different_panel_and_settings_versions_are_rejected(self):
-        with patch.object(release_config.subprocess, "check_output", side_effect=["cosmic-panel 1:1.11.0-1\n", "cosmic-settings 1:1.10.0-1\n"]):
+        with patch.object(system_packages.subprocess, "check_output", side_effect=["cosmic-panel 1:1.11.0-1\n", "cosmic-settings 1:1.10.0-1\n"]):
             with self.assertRaisesRegex(RuntimeError, "must match"):
                 release_config.select(self.release)
         with self.assertRaisesRegex(RuntimeError, "Unsupported COSMIC"):

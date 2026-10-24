@@ -19,7 +19,8 @@ FILES = ["README.md", "LICENSE", "NOTICE", "RELEASE_NOTES.md", "release.json",
          "install.sh", "uninstall.sh", "build-from-source.sh", "panel-gradient.patch",
          "settings-gradient-toggle.patch", "assets/screenshot-light.png", "assets/screenshot-dark.png",
          "scripts/panel_control.py", "scripts/install_prebuilt.py", "scripts/build_source.py",
-         "scripts/build_release.py", "scripts/package_release.py", "scripts/release_config.py"]
+         "scripts/build_release.py", "scripts/package_release.py", "scripts/release_config.py",
+         "scripts/system_packages.py", "scripts/verify_release.py"]
 
 
 def add_bytes(archive, name, content, mode=0o644):
@@ -42,6 +43,9 @@ def source_files(source):
         if not entry:
             continue
         relative = Path(entry.decode())
+        if relative == Path(".cargo/config.toml"):
+            # Added below with the release's relative vendor path.
+            continue
         if any(part in {".git", "target", "work", "__pycache__"} for part in relative.parts):
             continue
         path = source / relative

@@ -21,24 +21,30 @@ A softer edge for your COSMIC desktop. Penumbra replaces the panel's flat backgr
 
 ## Compatibility
 
-This release supports **Arch Linux** with the following matching package pairs:
+This release supports **Arch Linux** and **Fedora 43 or newer** with COSMIC **1.10.0 or 1.11.0**. Panel and Settings must use the same upstream version.
+
+Supported Arch package pairs:
 
 | COSMIC | `cosmic-panel` | `cosmic-settings` |
 | --- | --- | --- |
 | 1.10.0 | `1:1.10.0-1` | `1:1.10.0-1` |
 | 1.11.0 | `1:1.11.0-1` | `1:1.11.0-1` |
 
-The installer detects the installed COSMIC version and selects its matching binaries. The ready-made binaries require **Linux x86_64** and **glibc 2.44 or newer**. Source builds use the same pinned version with your local toolchain and libraries. Both versions passed the panel and Settings regression tests; gradient controls, themes, maximize/restore, all four edges, opacity and auto-hide were also exercised in isolated desktops.
+On Fedora, the installer queries the native RPM packages. Fedora package release suffixes such as `-2.fc43` are accepted; the launcher records each installed package’s exact epoch, version, release, and architecture. After either package changes, it selects the stock programs until you reinstall a compatible Penumbra release.
+
+The installer detects the distribution and installed COSMIC version and selects its matching binaries. The same ready-made binaries support both distributions and require **Linux x86_64** and **glibc 2.42 or newer**. Source builds use the same pinned version with your local toolchain and libraries. Both versions passed the panel and Settings regression tests; gradient controls, themes, maximize/restore, all four edges, opacity and auto-hide were also exercised in isolated desktops.
 
 Penumbra installs patched versions of both the panel and Settings for your user. The system packages stay in place. These are full programs, so another custom replacement for either program must be combined with these patches. Pulsar Clock remains a separate applet and can be used alongside Penumbra.
 
 ### Using Rasm and Pulsar
 
-Pulsar Clock is a separate applet. For Rasm's font controls, install Penumbra first and then install the matching [cosmic-rasm](https://github.com/motixo/cosmic-rasm) release. Rasm selects a combined Settings binary with both the font controls and **Panel gradient**. Its updated launcher falls back to Penumbra's saved launcher after a COSMIC version change.
+Pulsar Clock is a separate applet. Rasm has its own distribution requirements; the combined Settings binaries currently target Arch Linux. For Rasm's font controls on Arch, install Penumbra first and then install the matching [cosmic-rasm](https://github.com/motixo/cosmic-rasm) release. Rasm selects a combined Settings binary with both the font controls and **Panel gradient**. Its updated launcher falls back to Penumbra's saved launcher after a COSMIC version change.
 
 When updating Penumbra while Rasm owns the Settings launcher, uninstall Rasm without `--purge`, update Penumbra, and reinstall Rasm. This keeps your font preferences and lets the installers preserve each other's launchers.
 
 ## Easy install: ready-made binaries
+
+The installer needs `curl`, `tar`, and Python 3. On Fedora, install them with `sudo dnf install curl tar python3` if needed.
 
 Download the binary archive from [Releases](https://github.com/motixo/penumbra-panel/releases/latest), or run:
 
@@ -63,7 +69,16 @@ Your session's `PATH` must put `~/.local/bin` before `/usr/bin`, so COSMIC can f
 
 ## Build it yourself
 
-Install the build tools and development libraries on Arch:
+On Fedora, install the build tools and development libraries:
+
+```sh
+sudo dnf install gcc gcc-c++ rust cargo git python3 clang cmake pkgconf-pkg-config \
+  fontconfig-devel freetype-devel wayland-devel libxkbcommon-devel libinput-devel \
+  pulseaudio-libs-devel pipewire-devel libglvnd-devel dbus-devel systemd-devel \
+  libdav1d-devel openssl-devel binutils
+```
+
+On Arch:
 
 ```sh
 sudo pacman -S --needed base-devel rust git python clang cmake pkgconf \
@@ -115,7 +130,7 @@ git pull --ff-only
 
 Saved gradient settings, panel layout, opacity, applets, and clock preferences are preserved. The new programs load after logging out and back in. Reopen Settings to load its new executable.
 
-After either supported Arch package changes, the launchers automatically select the stock programs on their next start. Use a compatible Penumbra release for the new COSMIC version; source builds also check the supported versions. This patch does not prevent system updates.
+After either supported COSMIC package changes, the launchers automatically select the stock programs on their next start. Use a compatible Penumbra release for the new COSMIC version; source builds also check the supported versions. This patch does not prevent system updates.
 
 ## Uninstall
 
@@ -151,7 +166,7 @@ bash -n install.sh uninstall.sh build-from-source.sh
 python3 scripts/build_release.py ./dist
 ```
 
-The release command builds and tests both programs, vendors their dependencies, and produces binary and source archives with `SHA256SUMS`. The **Build binary release** GitHub Actions workflow runs the same process in Arch Linux and publishes the version from `release.json`.
+The release command builds and tests both programs, vendors their dependencies, and produces binary and source archives with `SHA256SUMS`. The **Build binary release** GitHub Actions workflow builds on Fedora 43 for the older glibc baseline, checks the binaries and isolated install/uninstall lifecycle on Fedora 43, 44, 45 and Arch Linux, and publishes the version from `release.json`.
 
 The rendering surface has an empty input region, so the gradient does not intercept clicks outside the panel. The fade follows the panel's edge, size, output scale, and auto-hide motion. Maximized behavior follows COSMIC's existing window detection; keep `keep_style_on_maximize` disabled to use the uniform maximized background.
 

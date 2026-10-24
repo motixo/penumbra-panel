@@ -7,16 +7,20 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        cosmic: ["1.10.0", "1.11.0"]
     runs-on: ubuntu-latest
-    container: archlinux:base-devel
+    container: fedora:43
     steps:
       - name: Install build dependencies
         run: |
-          pacman -Syu --noconfirm
-          pacman -S --noconfirm --needed git rust python clang cmake pkgconf \
-            fontconfig freetype2 wayland libxkbcommon libinput libpulse \
-            libpipewire libglvnd dbus systemd-libs dav1d github-cli
+          dnf -y install gcc gcc-c++ rust cargo git python3 clang cmake pkgconf-pkg-config \
+            fontconfig-devel freetype-devel wayland-devel libxkbcommon-devel libinput-devel \
+            pulseaudio-libs-devel pipewire-devel libglvnd-devel dbus-devel systemd-devel \
+            libdav1d-devel openssl-devel binutils
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -24,8 +28,57 @@ jobs:
         env:
           CARGO_BUILD_JOBS: '2'
         run: |
-          python3 scripts/build_release.py ./dist --cosmic-version 1.10.0
-          python3 scripts/build_release.py ./dist --cosmic-version 1.11.0
+          python3 scripts/build_release.py ./dist --cosmic-version '${{ matrix.cosmic }}'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: cosmic-${{ matrix.cosmic }}
+          path: dist/*
+          if-no-files-found: error
+
+  runtime:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ["fedora:43", "fedora:44", "fedora:45", "archlinux:base-devel"]
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    steps:
+      - name: Install native COSMIC packages and runtime check tools
+        run: |
+          if command -v dnf >/dev/null; then
+            dnf -y install python3 git binutils cosmic-panel cosmic-settings
+          else
+            pacman -Syu --noconfirm
+            pacman -S --noconfirm --needed python git binutils cosmic-panel cosmic-settings
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: release-artifacts
+      - name: Check binaries, native package guards, and install/uninstall lifecycle
+        run: |
+          python3 -m unittest discover -s tests -v
+          python3 scripts/verify_release.py release-artifacts/*/penumbra-panel*-linux-x86_64.tar.gz
+
+  release:
+    needs: runtime
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: release-artifacts
+      - name: Collect archives and generate combined checksums
+        run: |
+          mkdir dist
+          cp release-artifacts/*/*.tar.gz dist/
+          cd dist
+          sha256sum *.tar.gz > SHA256SUMS
       - name: Publish release assets
         env:
           GH_TOKEN: ${{ github.token }}

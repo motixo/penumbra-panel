@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build, test and package an Arch Linux binary release and its source."""
+"""Build, test and package a Linux binary release and its source."""
 
 import argparse
 import json

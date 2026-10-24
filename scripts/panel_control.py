@@ -12,6 +12,8 @@ import shutil
 import subprocess
 import tempfile
 
+import system_packages
+
 NAME = "penumbra-panel"
 MARKER = "# Managed by penumbra-panel"
 LEGACY_MARKER = "# Managed by cosmic-top-panel-gradient"
@@ -49,15 +51,16 @@ def require_profile(profile):
 
 
 def package_versions(release):
+    backend = system_packages.backend()
     versions = {}
     for component in release["upstreams"].values():
         name = component["binary"]
-        try:
-            actual = subprocess.check_output(["pacman", "-Q", name], text=True, stderr=subprocess.PIPE).strip()
-        except (OSError, subprocess.CalledProcessError) as error:
-            raise RuntimeError("This release requires Arch Linux with the supported COSMIC packages.") from error
-        if actual != component["package"]:
+        actual = system_packages.query(name, backend)
+        expected = component["ref"].removeprefix("epoch-")
+        if backend == "pacman" and actual != component["package"]:
             raise RuntimeError(f"Unsupported package: {actual}. This patch requires {component['package']}.")
+        if system_packages.upstream_version(name, actual) != expected:
+            raise RuntimeError(f"Unsupported package: {actual}. This patch requires COSMIC {expected}.")
         versions[name] = actual
     return versions
 
@@ -74,10 +77,12 @@ def owned_launcher(path, allow_legacy=False):
     return contents
 
 
-def launcher(binary, packages):
+def launcher(binary, packages, backend=None):
+    backend = backend or system_packages.backend()
     lines = ["#!/bin/sh", MARKER]
     for index, (name, version) in enumerate(sorted(packages.items())):
-        lines.append(f"package_{index}=$(pacman -Q {shlex.quote(name)} 2>/dev/null) || package_{index}=")
+        command = shlex.join(system_packages.query_command(name, backend))
+        lines.append(f"package_{index}=$({command} 2>/dev/null) || package_{index}=")
     checks = [f'[ "$package_{index}" = {shlex.quote(version)} ]' for index, (_, version) in enumerate(sorted(packages.items()))]
     destination = DATA / "versions" / binary.parent.name / binary.name
     checks.append(f"[ -x {shlex.quote(str(destination))} ]")
